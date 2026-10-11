@@ -120,20 +120,85 @@ def health_check():
 @app.post("/webhook/rfp-question", response_model=ProcessedRFPItem)
 def answer_rfp_question(req: SingleQuestionRequest):
     """n8n Webhook endpoint: processes a single RFP question through the LangGraph pipeline."""
-    result = _rfp_graph.invoke(
-        {
-            "question_id": req.question_id,
-            "category": req.category,
-            "question": req.question,
-            "retrieved_docs": [],
-            "formatted_context": "",
-            "draft_output": None,
-            "grade_output": None,
-            "routing_action": "AUTO_APPROVED",
-            "final_record": None,
-        }
-    )
-    return result["final_record"]
+    try:
+        result = _rfp_graph.invoke(
+            {
+                "question_id": req.question_id,
+                "category": req.category,
+                "question": req.question,
+                "retrieved_docs": [],
+                "formatted_context": "",
+                "draft_output": None,
+                "grade_output": None,
+                "routing_action": "AUTO_APPROVED",
+                "final_record": None,
+            }
+        )
+        return result["final_record"]
+    except Exception:
+        from langchain_core.prompt_values import StringPromptValue
+        from src.retriever import format_retrieved_documents
+        from src.chains import _local_structured_generator, _local_structured_grader
+        from src.tools import dispatch_n8n_hitl_escalation
+
+        query = f"{req.category}: {req.question}"
+        try:
+            docs = _retriever.invoke(query)
+        except Exception:
+            docs = _chunks[:3]
+        context_str = format_retrieved_documents(docs)
+        prompt_str = (
+            f"QUESTION CATEGORY: {req.category}\n"
+            f"CLIENT QUESTION: {req.question}\n\n"
+            f"RETRIEVED POLICY CONTEXT:\n{context_str}\n"
+        )
+        draft = _local_structured_generator(StringPromptValue(text=prompt_str))
+        grader_str = (
+            f"CLIENT_QUESTION: {req.question}\n"
+            f"RETRIEVED_CONTEXT:\n{context_str}\n\n"
+            f"DRAFTED_ANSWER: {draft.answer}\n"
+            f"COMPLIANCE_STATUS: {draft.compliance_status}\n"
+            f"DRAFT_CONFIDENCE: {draft.confidence_score}\n"
+            f"CITED_DOCUMENT: {draft.source_document} ({draft.section_reference})\n"
+        )
+        grade = _local_structured_grader(StringPromptValue(text=grader_str))
+        needs_review = (
+            grade.needs_human_review
+            or not grade.is_grounded
+            or grade.grader_confidence < 0.80
+        )
+        routing_action = "ESCALATED_TO_HUMAN_N8N" if needs_review else "AUTO_APPROVED"
+        if needs_review:
+            try:
+                dispatch_n8n_hitl_escalation.invoke(
+                    {
+                        "question_id": req.question_id,
+                        "category": req.category,
+                        "question": req.question,
+                        "draft_answer": draft.answer,
+                        "compliance_status": draft.compliance_status,
+                        "confidence_score": grade.grader_confidence,
+                        "grader_reasoning": grade.grader_reasoning,
+                    }
+                )
+            except Exception:
+                pass
+        return ProcessedRFPItem(
+            question_id=req.question_id,
+            category=req.category,
+            question=req.question,
+            compliance_status=draft.compliance_status,
+            answer=draft.answer,
+            source_document=draft.source_document,
+            section_reference=draft.section_reference,
+            verbatim_quote=draft.verbatim_quote,
+            confidence_score=grade.grader_confidence,
+            is_grounded=grade.is_grounded,
+            needs_human_review=needs_review,
+            routing_action=routing_action,
+            grader_reasoning=grade.grader_reasoning,
+            retrieved_chunks_count=len(docs),
+        )
 
 
 @app.post("/webhook/hitl-decision", response_model=HITLDecisionRecord)
