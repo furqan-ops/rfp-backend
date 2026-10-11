@@ -1,0 +1,13 @@
+question_id,category,question
+Q-01,Security & Encryption,"How is customer data encrypted both at rest and in transit, and how often are encryption keys rotated?"
+Q-02,Compliance,"Do you hold an active SOC 2 Type II certification and are you able to sign a HIPAA Business Associate Agreement (BAA)?"
+Q-03,AI Privacy,"Are our proprietary documents and prompts ever used to train public or foundation LLM models?"
+Q-04,Architecture & SLA,"What is your guaranteed monthly uptime SLA, and what are your Recovery Time Objective (RTO) and Recovery Point Objective (RPO) targets?"
+Q-05,Reliability,"How does your platform handle downstream CRM outages or rate limits without losing or duplicating webhook events?"
+Q-06,Incident Response,"What is your guaranteed first response time for a P1 Critical production outage or security breach?"
+Q-07,AI Governance,"How do you prevent AI hallucinations in automated customer or RFP responses, and when does a human review step trigger?"
+Q-08,Data Retention,"If we terminate our contract, how many days does it take to permanently delete all our data and vector embeddings?"
+Q-09,Integrations,"Which CRM platforms and messaging channels do you support natively out of the box?"
+Q-10,Implementation,"What is the typical end-to-end implementation timeline from contract kickoff to production launch?"
+Q-11,Government & Deployment,"Are you FedRAMP High Authorized and can we deploy your software as an air-gapped on-premise binary inside our private data center?"
+Q-12,ERP & Blockchain,"Do you offer a native out-of-the-box SAP R/3 mainframe connector and built-in Ethereum smart contract billing?"

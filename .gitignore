@@ -1,0 +1,30 @@
+# Environment & secrets
+.env
+.env.local
+.env.*
+!.env.example
+credentials.json
+
+# Python bytecode & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Runtime logs
+logs/
+*.log
+
+# Nested frontend repo & local workspace artifacts
+ui ux/
+.agents/
+.claude/
+build_ui_ux_spec_pdf.py
+RFP_LangChain_Architecture_and_UI_UX_Spec.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
