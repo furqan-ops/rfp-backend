@@ -41,10 +41,15 @@ def dispatch_n8n_hitl_escalation(
     }
 
     output_dir = Path("data/output")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    jsonl_path = output_dir / "n8n_hitl_escalations.jsonl"
-    with jsonl_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(payload) + "\n")
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        jsonl_path = output_dir / "n8n_hitl_escalations.jsonl"
+        with jsonl_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload) + "\n")
+    except OSError:
+        jsonl_path = Path("/tmp/n8n_hitl_escalations.jsonl")
+        with jsonl_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload) + "\n")
 
     webhook_url = os.getenv("N8N_HITL_WEBHOOK_URL", "").strip()
     if webhook_url and webhook_url.startswith("http") and "example.com" not in webhook_url:

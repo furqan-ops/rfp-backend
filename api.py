@@ -130,9 +130,6 @@ def record_hitl_decision(req: HITLDecisionRequest):
     Stores a Human-in-the-Loop reviewer decision (APPROVED or REJECTED) in HITL_DECISIONS_FILE
     with a UTC timestamp and returns the saved record. Does not call n8n.
     """
-    log_file = Path(os.getenv("HITL_DECISIONS_FILE", HITL_DECISIONS_FILE))
-    log_file.parent.mkdir(parents=True, exist_ok=True)
-
     saved_record = HITLDecisionRecord(
         timestamp_utc=datetime.now(timezone.utc).isoformat(),
         question_id=req.question_id,
@@ -140,8 +137,16 @@ def record_hitl_decision(req: HITLDecisionRequest):
         edited_answer=req.edited_answer,
         reviewer_name=req.reviewer_name,
     )
-    with log_file.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(saved_record.model_dump()) + "\n")
+    log_file = Path(os.getenv("HITL_DECISIONS_FILE", HITL_DECISIONS_FILE))
+    try:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        with log_file.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(saved_record.model_dump()) + "\n")
+    except OSError:
+        fallback_file = Path("/tmp/hitl_decisions.jsonl")
+        fallback_file.parent.mkdir(parents=True, exist_ok=True)
+        with fallback_file.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(saved_record.model_dump()) + "\n")
 
     return saved_record
 
