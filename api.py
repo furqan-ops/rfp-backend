@@ -94,6 +94,18 @@ class HITLDecisionRecord(BaseModel):
     reviewer_name: str
 
 
+@app.get("/")
+def root_status():
+    return {
+        "service": "Enterprise RFP & Security Questionnaire Auto-Responder",
+        "status": "ok",
+        "indexed_chunks": len(_chunks),
+        "confidence_threshold": 0.80,
+        "grader_confidence": compute_mean_grader_confidence(),
+        "endpoints": ["/health", "/webhook/rfp-question", "/webhook/hitl-decision", "/docs"],
+    }
+
+
 @app.get("/health")
 def health_check():
     return {

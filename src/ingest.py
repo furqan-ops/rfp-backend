@@ -73,18 +73,24 @@ def get_embeddings() -> Embeddings:
     gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
 
-    if provider in ("gemini", "auto") and gemini_key and not gemini_key.startswith("your_"):
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
-        return GoogleGenerativeAIEmbeddings(
-            model="models/text-embedding-004",
-            google_api_key=gemini_key,
-        )
-    if provider in ("openai", "auto") and openai_key and not openai_key.startswith("your_"):
-        from langchain_openai import OpenAIEmbeddings
-        return OpenAIEmbeddings(
-            model="text-embedding-3-small",
-             api_key=openai_key,
-        )
+    if provider in ("gemini", "auto") and gemini_key.startswith("AIza") and "=" not in gemini_key:
+        try:
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
+            return GoogleGenerativeAIEmbeddings(
+                model="models/text-embedding-004",
+                google_api_key=gemini_key,
+            )
+        except Exception:
+            pass
+    if provider in ("openai", "auto") and openai_key.startswith("sk-") and "=" not in openai_key:
+        try:
+            from langchain_openai import OpenAIEmbeddings
+            return OpenAIEmbeddings(
+                model="text-embedding-3-small",
+                api_key=openai_key,
+            )
+        except Exception:
+            pass
     return LocalDomainKeywordEmbeddings()
 
 

@@ -30,26 +30,26 @@ Evaluate whether the DRAFTED_ANSWER is 100% grounded in the RETRIEVED_CONTEXT an
 
 
 def _get_cloud_llm():
-    """Returns configured LangChain ChatModel (Gemini, Groq, or OpenAI) if an API key is present."""
+    """Returns configured LangChain ChatModel (Gemini, Groq, or OpenAI) if a valid API key is present."""
     gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
 
-    if gemini_key and not gemini_key.startswith("your_"):
+    if gemini_key.startswith("AIza") and "=" not in gemini_key:
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
             model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
             google_api_key=gemini_key,
             temperature=0.0,
         )
-    if groq_key and not groq_key.startswith("your_"):
+    if groq_key.startswith("gsk_") and "=" not in groq_key:
         from langchain_groq import ChatGroq
         return ChatGroq(
             model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
             api_key=groq_key,
             temperature=0.0,
         )
-    if openai_key and not openai_key.startswith("your_"):
+    if openai_key.startswith("sk-") and "=" not in openai_key:
         from langchain_openai import ChatOpenAI
         return ChatOpenAI(
             model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
@@ -236,10 +236,11 @@ def build_rfp_generator_chain() -> Runnable:
         ]
     )
     cloud_llm = _get_cloud_llm()
+    fallback_gen = RunnableLambda(_local_structured_generator)
     if cloud_llm is not None:
-        structured_llm = cloud_llm.with_structured_output(RFPAnswerOutput)
+        structured_llm = cloud_llm.with_structured_output(RFPAnswerOutput).with_fallbacks([fallback_gen])
     else:
-        structured_llm = RunnableLambda(_local_structured_generator)
+        structured_llm = fallback_gen
 
     # LangChain Expression Language (LCEL) pipe composition
     return prompt | structured_llm
@@ -266,9 +267,10 @@ def build_hallucination_grader_chain() -> Runnable:
         ]
     )
     cloud_llm = _get_cloud_llm()
+    fallback_grader = RunnableLambda(_local_structured_grader)
     if cloud_llm is not None:
-        structured_grader = cloud_llm.with_structured_output(HallucinationGrade)
+        structured_grader = cloud_llm.with_structured_output(HallucinationGrade).with_fallbacks([fallback_grader])
     else:
-        structured_grader = RunnableLambda(_local_structured_grader)
+        structured_grader = fallback_grader
 
     return prompt | structured_grader
